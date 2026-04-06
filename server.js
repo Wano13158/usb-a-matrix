@@ -59,7 +59,7 @@ async function registerWithSharedSecret(username, password) {
 
   if (!nonceResponse.ok || !nonceData?.nonce) {
     const reason = nonceData?.error || `HTTP ${nonceResponse.status}`;
-    throw new Error(`Не удалось получить nonce от Synapse Admin API: ${reason}`);
+    throw new Error(`Не удалось получить nonce от Synapse Admin API (fallback): ${reason}`);
   }
 
   const nonce = nonceData.nonce;
@@ -82,7 +82,7 @@ async function registerWithSharedSecret(username, password) {
   const createData = await createResponse.json();
   if (!createResponse.ok) {
     const reason = createData?.error || `HTTP ${createResponse.status}`;
-    throw new Error(`Не удалось создать пользователя через shared secret: ${reason}`);
+    throw new Error(`Не удалось создать пользователя через Synapse shared secret fallback: ${reason}`);
   }
 
   return createData;
@@ -122,7 +122,7 @@ app.post("/api/register", async (req, res) => {
             return res.status(502).json({
               errcode: data.errcode,
               error:
-                "Обычная регистрация отключена, и резервная регистрация через Synapse Admin API не удалась.",
+                "Обычная регистрация отключена, и резервная регистрация через Synapse Admin API fallback не удалась.",
               details: adminError.message,
             });
           }
@@ -131,7 +131,7 @@ app.post("/api/register", async (req, res) => {
         return res.status(403).json({
           errcode: data.errcode,
           error:
-            "Регистрация отключена на Matrix homeserver. Войдите существующим пользователем или задайте MATRIX_SHARED_SECRET для серверной регистрации через Synapse Admin API.",
+            "Регистрация отключена на Matrix homeserver. Для Tuwunel включите allow_registration/registration_token; для Synapse можно задать MATRIX_SHARED_SECRET.",
           details: data.error,
         });
       }
@@ -296,5 +296,5 @@ app.post("/api/rooms/:roomId/send", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`USB-A Matrix server started at http://localhost:${PORT}`);
+  console.log(`USB-A Tuwunel server started at http://localhost:${PORT}`);
 });
