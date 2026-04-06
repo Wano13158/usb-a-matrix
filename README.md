@@ -24,14 +24,14 @@ npm run start
 
 ## Переменные окружения
 - `PORT` — порт HTTP-сервера (по умолчанию `3000`)
-- `MATRIX_BASE_URL` — URL *вашего* Matrix homeserver (для локального Tuwunel обычно `http://127.0.0.1:8008`)
+- `MATRIX_BASE_URL` — URL *вашего* Matrix homeserver (для локального Tuwunel обычно `http://127.0.0.1:6167`)
 - `MATRIX_SHARED_SECRET` *(опционально)* — shared secret Synapse Admin API fallback (актуально только если вы используете именно Synapse)
 
 Пример `.env`:
 
 ```env
 PORT=3000
-MATRIX_BASE_URL=http://127.0.0.1:8008
+MATRIX_BASE_URL=http://127.0.0.1:6167
 # MATRIX_SHARED_SECRET=change_me
 ```
 
@@ -67,7 +67,7 @@ sudo nano /etc/tuwunel/tuwunel.toml
 server_name = "matrix.example.com"
 database_path = "/var/lib/tuwunel"
 address = "0.0.0.0"
-port = 8008
+port = 6167
 
 # регистрация
 allow_registration = true
@@ -84,7 +84,7 @@ sudo systemctl status tuwunel
 Проверка локально:
 
 ```bash
-curl -s http://127.0.0.1:8008/_matrix/client/versions
+curl -s http://127.0.0.1:6167/_matrix/client/versions
 ```
 
 ### 3) Привязать USB-A к вашему Tuwunel
@@ -93,7 +93,7 @@ curl -s http://127.0.0.1:8008/_matrix/client/versions
 
 ```env
 PORT=3000
-MATRIX_BASE_URL=http://127.0.0.1:8008
+MATRIX_BASE_URL=http://127.0.0.1:6167
 # MATRIX_SHARED_SECRET можно оставить пустым при Tuwunel
 ```
 
@@ -119,6 +119,7 @@ cp .env.example .env
 
 При необходимости поменяйте в `.env`:
 - `TUWUNEL_SERVER_NAME` (например `matrix.example.com`)
+- `TUWUNEL_PORT` (`6167` по умолчанию)
 - `TUWUNEL_ALLOW_REGISTRATION` / `TUWUNEL_REGISTRATION_TOKEN` (если хотите закрытую регистрацию через токен)
 
 ### 2) Подготовить переменные Tuwunel
@@ -335,7 +336,7 @@ sudo systemctl restart tuwunel
 5. Проверьте, что регистрация открылась (для варианта с `allow_registration = true`):
 
 ```bash
-curl -s "http://127.0.0.1:8008/_matrix/client/v3/register/available?username=test_user"
+curl -s "http://127.0.0.1:6167/_matrix/client/v3/register/available?username=test_user"
 ```
 
 Если не хотите открывать публичную регистрацию, оставьте её выключенной и используйте `TUWUNEL_REGISTRATION_TOKEN`.

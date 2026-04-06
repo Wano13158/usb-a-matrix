@@ -49,6 +49,13 @@ function isRegistrationDisabled(responseStatus, data) {
   );
 }
 
+function homeserverConnectionError(error) {
+  return {
+    error: `Не удалось подключиться к homeserver ${MATRIX_BASE_URL}. Проверьте доступность сервера и правильность MATRIX_BASE_URL.`,
+    details: error.message,
+  };
+}
+
 async function registerWithSharedSecret(username, password) {
   if (!MATRIX_SHARED_SECRET) {
     throw new Error("MATRIX_SHARED_SECRET is not configured");
@@ -141,7 +148,7 @@ app.post("/api/register", async (req, res) => {
 
     return res.json(data);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(502).json(homeserverConnectionError(error));
   }
 });
 
@@ -170,7 +177,7 @@ app.post("/api/login", async (req, res) => {
 
     return res.json(data);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(502).json(homeserverConnectionError(error));
   }
 });
 
@@ -193,7 +200,7 @@ app.get("/api/rooms", async (req, res) => {
 
     return res.json(data);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(502).json(homeserverConnectionError(error));
   }
 });
 
@@ -224,7 +231,7 @@ app.post("/api/rooms/join", async (req, res) => {
 
     return res.json(data);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(502).json(homeserverConnectionError(error));
   }
 });
 
@@ -251,7 +258,7 @@ app.get("/api/rooms/:roomId/messages", async (req, res) => {
 
     return res.json(data);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(502).json(homeserverConnectionError(error));
   }
 });
 
@@ -291,7 +298,7 @@ app.post("/api/rooms/:roomId/send", async (req, res) => {
 
     return res.json(data);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(502).json(homeserverConnectionError(error));
   }
 });
 
