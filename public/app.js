@@ -31,7 +31,9 @@ async function api(path, options = {}) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.error || data.errcode || `HTTP ${response.status}`);
+    const message = data.error || data.errcode || `HTTP ${response.status}`;
+    const details = data.details ? ` (${data.details})` : "";
+    throw new Error(`${message}${details}`);
   }
 
   return data;
