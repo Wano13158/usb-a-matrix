@@ -104,6 +104,63 @@ MATRIX_SHARED_SECRET=CHANGE_ME_LONG_RANDOM_SECRET
 После изменения `.env` перезапустите сервис USB-A.
 
 
+
+## Запуск через Docker / Docker Compose (x86_64 + ARM64)
+
+Добавлен готовый `docker-compose.yml`, который поднимает:
+- `synapse` (ваш Matrix homeserver)
+- `usb-a-matrix` (этот backend+frontend)
+
+Официальные образы `matrixdotorg/synapse` и `node:20-alpine` поддерживают разные архитектуры (включая **ARM64**, например Apple Silicon и Raspberry Pi 4/5).
+
+### 1) Подготовка
+
+```bash
+cp .env.example .env
+```
+
+При необходимости поменяйте в `.env`:
+- `SYNAPSE_SERVER_NAME` (например `matrix.example.com`)
+- `MATRIX_SHARED_SECRET` (если хотите закрытую регистрацию через shared secret)
+
+### 2) Сгенерировать конфиг Synapse
+
+```bash
+./scripts/init-synapse.sh matrix.local no
+```
+
+Скрипт создаст `./synapse-data/homeserver.yaml` через контейнер Synapse.
+
+### 3) Запуск стека
+
+```bash
+docker compose up -d --build
+```
+
+Проверки:
+
+```bash
+curl http://127.0.0.1:8008/_matrix/client/versions
+curl http://127.0.0.1:3000/api/health
+```
+
+### 4) Создать первого администратора Synapse
+
+```bash
+docker compose exec synapse register_new_matrix_user -u admin -p 'StrongPassword123' -a http://localhost:8008
+```
+
+После этого можно входить в USB-A под этим пользователем.
+
+### 5) Полезные команды
+
+```bash
+docker compose logs -f synapse
+docker compose logs -f usb-a-matrix
+docker compose down
+```
+
+
 ## Установка сервера на Linux (Ubuntu/Debian)
 
 Ниже — базовая инструкция для установки и запуска как системного сервиса через `systemd`.
