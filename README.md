@@ -25,12 +25,14 @@ npm run start
 ## Переменные окружения
 - `PORT` — порт HTTP-сервера (по умолчанию `3000`)
 - `MATRIX_BASE_URL` — URL Matrix homeserver (например `https://matrix.org`)
+- `MATRIX_SHARED_SECRET` *(опционально)* — shared secret Synapse для серверной регистрации через Admin API, когда обычная регистрация отключена
 
 Пример `.env`:
 
 ```env
 PORT=3000
 MATRIX_BASE_URL=https://matrix.org
+# MATRIX_SHARED_SECRET=change_me
 ```
 
 ---
@@ -60,9 +62,9 @@ npm -v
 ```bash
 sudo mkdir -p /opt/usb-a-matrix
 sudo chown "$USER":"$USER" /opt/usb-a-matrix
-git clone https://github.com/Wano13158/usb-a-matrix /opt/usb-a-matrix
+git clone <URL_ВАШЕГО_РЕПО> /opt/usb-a-matrix
 cd /opt/usb-a-matrix
-npm install
+npm ci
 ```
 
 ### 3) Настройка переменных окружения
@@ -186,3 +188,35 @@ sudo systemctl reload nginx
 - защита от CSRF/XSS
 - логирование и мониторинг
 - хранение секретов через vault/secret manager
+
+## Troubleshooting
+
+### Ошибка регистрации: `Registration has been disabled. Only m.login.application_service registrations are allowed.`
+
+Это означает, что на вашем Matrix homeserver отключена обычная регистрация пользователей.
+
+Что делать:
+1. Входите существующим пользователем через кнопку **Вход**.
+2. Если вы админ Synapse и хотите включить self-registration, проверьте `homeserver.yaml`:
+
+```yaml
+enable_registration: true
+```
+
+3. Если публичную регистрацию включать нельзя, используйте fallback-регистрацию через Admin API:
+   - задайте `MATRIX_SHARED_SECRET` в `.env` (тот же secret, что в Synapse конфиге);
+   - перезапустите backend (`sudo systemctl restart usb-a-matrix` или `npm run start`).
+
+4. После изменения конфигурации Synapse перезапустите его (пример):
+
+```bash
+sudo systemctl restart matrix-synapse
+```
+
+5. Проверьте, что регистрация открылась (для варианта с `enable_registration: true`):
+
+```bash
+curl -s "http://127.0.0.1:8008/_matrix/client/v3/register/available?username=test_user"
+```
+
+Если не хотите открывать публичную регистрацию, оставьте её выключенной и регистрируйте пользователей через `MATRIX_SHARED_SECRET` или админ-утилиты Synapse.

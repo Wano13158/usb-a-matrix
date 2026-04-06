@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "node:path";
+import { createHmac } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 dotenv.config();
@@ -9,6 +10,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 const MATRIX_BASE_URL = process.env.MATRIX_BASE_URL || "https://matrix.org";
+const MATRIX_SHARED_SECRET = process.env.MATRIX_SHARED_SECRET || "";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,6 +40,54 @@ function sanitizeLimit(rawLimit, defaultLimit = 30) {
   return Math.max(1, Math.min(100, Math.trunc(parsed)));
 }
 
+function isRegistrationDisabled(responseStatus, data) {
+  const matrixError = `${data?.error || ""}`;
+  return (
+    responseStatus === 403 &&
+    data?.errcode === "M_FORBIDDEN" &&
+    matrixError.includes("Registration has been disabled")
+  );
+}
+
+async function registerWithSharedSecret(username, password) {
+  if (!MATRIX_SHARED_SECRET) {
+    throw new Error("MATRIX_SHARED_SECRET is not configured");
+  }
+
+  const nonceResponse = await fetch(makeMatrixUrl("/_synapse/admin/v1/register"));
+  const nonceData = await nonceResponse.json();
+
+  if (!nonceResponse.ok || !nonceData?.nonce) {
+    const reason = nonceData?.error || `HTTP ${nonceResponse.status}`;
+    throw new Error(`Не удалось получить nonce от Synapse Admin API: ${reason}`);
+  }
+
+  const nonce = nonceData.nonce;
+  const mac = createHmac("sha1", MATRIX_SHARED_SECRET)
+    .update(`${nonce}\x00${username}\x00${password}\x00notadmin`)
+    .digest("hex");
+
+  const createResponse = await fetch(makeMatrixUrl("/_synapse/admin/v1/register"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      nonce,
+      username,
+      password,
+      admin: false,
+      mac,
+    }),
+  });
+
+  const createData = await createResponse.json();
+  if (!createResponse.ok) {
+    const reason = createData?.error || `HTTP ${createResponse.status}`;
+    throw new Error(`Не удалось создать пользователя через shared secret: ${reason}`);
+  }
+
+  return createData;
+}
+
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, homeserver: MATRIX_BASE_URL });
 });
@@ -63,17 +113,25 @@ app.post("/api/register", async (req, res) => {
 
     const data = await response.json();
     if (!response.ok) {
-      const matrixError = `${data?.error || ""}`;
-      const registrationDisabled =
-        response.status === 403 &&
-        data?.errcode === "M_FORBIDDEN" &&
-        matrixError.includes("Registration has been disabled");
+      if (isRegistrationDisabled(response.status, data)) {
+        if (MATRIX_SHARED_SECRET) {
+          try {
+            const adminRegistration = await registerWithSharedSecret(username, password);
+            return res.json(adminRegistration);
+          } catch (adminError) {
+            return res.status(502).json({
+              errcode: data.errcode,
+              error:
+                "Обычная регистрация отключена, и резервная регистрация через Synapse Admin API не удалась.",
+              details: adminError.message,
+            });
+          }
+        }
 
-      if (registrationDisabled) {
         return res.status(403).json({
           errcode: data.errcode,
           error:
-            "Регистрация отключена на Matrix homeserver. Войдите существующим пользователем или включите регистрацию на сервере (Synapse: enable_registration: true).",
+            "Регистрация отключена на Matrix homeserver. Войдите существующим пользователем или задайте MATRIX_SHARED_SECRET для серверной регистрации через Synapse Admin API.",
           details: data.error,
         });
       }
