@@ -9,7 +9,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MATRIX_BASE_URL = process.env.MATRIX_BASE_URL || "https://matrix.org";
+const MATRIX_BASE_URL = process.env.MATRIX_BASE_URL || "http://127.0.0.1:8008";
 const MATRIX_SHARED_SECRET = process.env.MATRIX_SHARED_SECRET || "";
 
 const __filename = fileURLToPath(import.meta.url);

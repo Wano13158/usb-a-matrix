@@ -24,18 +24,85 @@ npm run start
 
 ## Переменные окружения
 - `PORT` — порт HTTP-сервера (по умолчанию `3000`)
-- `MATRIX_BASE_URL` — URL Matrix homeserver (например `https://matrix.org`)
+- `MATRIX_BASE_URL` — URL *вашего* Matrix homeserver (для локального Synapse обычно `http://127.0.0.1:8008`)
 - `MATRIX_SHARED_SECRET` *(опционально)* — shared secret Synapse для серверной регистрации через Admin API, когда обычная регистрация отключена
 
 Пример `.env`:
 
 ```env
 PORT=3000
-MATRIX_BASE_URL=https://matrix.org
+MATRIX_BASE_URL=http://127.0.0.1:8008
 # MATRIX_SHARED_SECRET=change_me
 ```
 
 ---
+
+
+## Поднять собственный Matrix сервер (Synapse) на Linux
+
+Ниже минимальный рабочий вариант для **Ubuntu 22.04/24.04**. После этого USB-A будет работать с вашим сервером, а не с публичными homeserver.
+
+### 1) Установить Synapse
+
+```bash
+sudo apt update
+sudo apt install -y lsb-release wget apt-transport-https
+sudo wget -O /usr/share/keyrings/matrix-org-archive-keyring.gpg https://packages.matrix.org/debian/matrix-org-archive-keyring.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/matrix-org-archive-keyring.gpg] https://packages.matrix.org/debian/ $(lsb_release -cs) main" |   sudo tee /etc/apt/sources.list.d/matrix-org.list
+
+sudo apt update
+sudo apt install -y matrix-synapse-py3
+```
+
+Во время установки укажите домен вашего сервера (например `matrix.example.com`).
+
+### 2) Базовая настройка Synapse
+
+Откройте конфиг:
+
+```bash
+sudo nano /etc/matrix-synapse/homeserver.yaml
+```
+
+Проверьте ключевые параметры:
+
+```yaml
+server_name: "matrix.example.com"
+public_baseurl: "https://matrix.example.com/"
+
+# если нужна публичная регистрация
+enable_registration: false
+
+# если регистрация через shared secret (рекомендуется для закрытых инсталляций)
+registration_shared_secret: "CHANGE_ME_LONG_RANDOM_SECRET"
+```
+
+Перезапуск:
+
+```bash
+sudo systemctl restart matrix-synapse
+sudo systemctl status matrix-synapse
+```
+
+Проверка локально:
+
+```bash
+curl -s http://127.0.0.1:8008/_matrix/client/versions
+```
+
+### 3) Привязать USB-A к вашему Synapse
+
+В `.env` проекта USB-A:
+
+```env
+PORT=3000
+MATRIX_BASE_URL=http://127.0.0.1:8008
+MATRIX_SHARED_SECRET=CHANGE_ME_LONG_RANDOM_SECRET
+```
+
+После изменения `.env` перезапустите сервис USB-A.
+
 
 ## Установка сервера на Linux (Ubuntu/Debian)
 
@@ -76,7 +143,7 @@ nano .env
 
 Минимально укажите:
 - `PORT=3000`
-- `MATRIX_BASE_URL=https://matrix.org` (или ваш homeserver)
+- `MATRIX_BASE_URL=http://127.0.0.1:8008` (или ваш homeserver)
 
 ### 4) Проверка ручного запуска
 
