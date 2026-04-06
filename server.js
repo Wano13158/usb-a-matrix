@@ -49,6 +49,13 @@ function isRegistrationDisabled(responseStatus, data) {
   );
 }
 
+function homeserverConnectionError(error) {
+  return {
+    error: `Не удалось подключиться к homeserver ${MATRIX_BASE_URL}. Проверьте доступность сервера и правильность MATRIX_BASE_URL.`,
+    details: error.message,
+  };
+}
+
 async function registerWithSharedSecret(username, password) {
   if (!MATRIX_SHARED_SECRET) {
     throw new Error("MATRIX_SHARED_SECRET is not configured");
@@ -59,7 +66,7 @@ async function registerWithSharedSecret(username, password) {
 
   if (!nonceResponse.ok || !nonceData?.nonce) {
     const reason = nonceData?.error || `HTTP ${nonceResponse.status}`;
-    throw new Error(`Не удалось получить nonce от Synapse Admin API: ${reason}`);
+    throw new Error(`Не удалось получить nonce от Synapse Admin API (fallback): ${reason}`);
   }
 
   const nonce = nonceData.nonce;
@@ -82,7 +89,7 @@ async function registerWithSharedSecret(username, password) {
   const createData = await createResponse.json();
   if (!createResponse.ok) {
     const reason = createData?.error || `HTTP ${createResponse.status}`;
-    throw new Error(`Не удалось создать пользователя через shared secret: ${reason}`);
+    throw new Error(`Не удалось создать пользователя через Synapse shared secret fallback: ${reason}`);
   }
 
   return createData;
@@ -122,7 +129,7 @@ app.post("/api/register", async (req, res) => {
             return res.status(502).json({
               errcode: data.errcode,
               error:
-                "Обычная регистрация отключена, и резервная регистрация через Synapse Admin API не удалась.",
+                "Обычная регистрация отключена, и резервная регистрация через Synapse Admin API fallback не удалась.",
               details: adminError.message,
             });
           }
@@ -131,7 +138,7 @@ app.post("/api/register", async (req, res) => {
         return res.status(403).json({
           errcode: data.errcode,
           error:
-            "Регистрация отключена на Matrix homeserver. Войдите существующим пользователем или задайте MATRIX_SHARED_SECRET для серверной регистрации через Synapse Admin API.",
+            "Регистрация отключена на Matrix homeserver. Для Tuwunel включите allow_registration/registration_token; для Synapse можно задать MATRIX_SHARED_SECRET.",
           details: data.error,
         });
       }
@@ -141,7 +148,7 @@ app.post("/api/register", async (req, res) => {
 
     return res.json(data);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(502).json(homeserverConnectionError(error));
   }
 });
 
@@ -170,7 +177,7 @@ app.post("/api/login", async (req, res) => {
 
     return res.json(data);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(502).json(homeserverConnectionError(error));
   }
 });
 
@@ -193,7 +200,7 @@ app.get("/api/rooms", async (req, res) => {
 
     return res.json(data);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(502).json(homeserverConnectionError(error));
   }
 });
 
@@ -224,7 +231,7 @@ app.post("/api/rooms/join", async (req, res) => {
 
     return res.json(data);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(502).json(homeserverConnectionError(error));
   }
 });
 
@@ -251,7 +258,7 @@ app.get("/api/rooms/:roomId/messages", async (req, res) => {
 
     return res.json(data);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(502).json(homeserverConnectionError(error));
   }
 });
 
@@ -291,10 +298,10 @@ app.post("/api/rooms/:roomId/send", async (req, res) => {
 
     return res.json(data);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(502).json(homeserverConnectionError(error));
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`USB-A Matrix server started at http://localhost:${PORT}`);
+  console.log(`USB-A Tuwunel server started at http://localhost:${PORT}`);
 });

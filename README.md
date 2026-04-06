@@ -1,12 +1,12 @@
-# USB-A Matrix Messenger
+# USB-A Tuwunel Messenger
 
-Простой мессенджер **USB-A** на базе протокола **Matrix**:
+Простой мессенджер **USB-A** на базе протокола **Tuwunel**:
 - веб-сайт (frontend) в папке `public/`
 - серверная часть (backend/API proxy) в `server.js`
 
 ## Что уже реализовано
-- регистрация пользователя Matrix
-- вход пользователя Matrix
+- регистрация пользователя Tuwunel
+- вход пользователя Tuwunel
 - получение списка подключённых комнат
 - вход в комнату по `roomId` или `alias`
 - загрузка сообщений комнаты
@@ -24,81 +24,77 @@ npm run start
 
 ## Переменные окружения
 - `PORT` — порт HTTP-сервера (по умолчанию `3000`)
-- `MATRIX_BASE_URL` — URL *вашего* Matrix homeserver (для локального Synapse обычно `http://127.0.0.1:8008`)
-- `MATRIX_SHARED_SECRET` *(опционально)* — shared secret Synapse для серверной регистрации через Admin API, когда обычная регистрация отключена
+- `MATRIX_BASE_URL` — URL *вашего* Matrix homeserver (для локального Tuwunel обычно `http://127.0.0.1:6167`)
+- `MATRIX_SHARED_SECRET` *(опционально)* — shared secret Synapse Admin API fallback (актуально только если вы используете именно Synapse)
 
 Пример `.env`:
 
 ```env
 PORT=3000
-MATRIX_BASE_URL=http://127.0.0.1:8008
+MATRIX_BASE_URL=http://127.0.0.1:6167
 # MATRIX_SHARED_SECRET=change_me
 ```
 
 ---
 
 
-## Поднять собственный Matrix сервер (Synapse) на Linux
+## Поднять собственный Matrix сервер (Tuwunel) на Linux
 
 Ниже минимальный рабочий вариант для **Ubuntu 22.04/24.04**. После этого USB-A будет работать с вашим сервером, а не с публичными homeserver.
 
-### 1) Установить Synapse
+### 1) Установить Tuwunel
 
 ```bash
 sudo apt update
-sudo apt install -y lsb-release wget apt-transport-https
-sudo wget -O /usr/share/keyrings/matrix-org-archive-keyring.gpg https://packages.matrix.org/debian/matrix-org-archive-keyring.gpg
-
-echo "deb [signed-by=/usr/share/keyrings/matrix-org-archive-keyring.gpg] https://packages.matrix.org/debian/ $(lsb_release -cs) main" |   sudo tee /etc/apt/sources.list.d/matrix-org.list
-
-sudo apt update
-sudo apt install -y matrix-synapse-py3
+./scripts/install-tuwunel.sh
 ```
+
+Скрипт автоматически выбирает бинарник для `x86_64` и `arm64` (`aarch64`).
 
 Во время установки укажите домен вашего сервера (например `matrix.example.com`).
 
-### 2) Базовая настройка Synapse
+### 2) Базовая настройка Tuwunel
 
 Откройте конфиг:
 
 ```bash
-sudo nano /etc/matrix-synapse/homeserver.yaml
+sudo nano /etc/tuwunel/tuwunel.toml
 ```
 
 Проверьте ключевые параметры:
 
-```yaml
-server_name: "matrix.example.com"
-public_baseurl: "https://matrix.example.com/"
+```toml
+server_name = "matrix.example.com"
+database_path = "/var/lib/tuwunel"
+address = "0.0.0.0"
+port = 6167
 
-# если нужна публичная регистрация
-enable_registration: false
-
-# если регистрация через shared secret (рекомендуется для закрытых инсталляций)
-registration_shared_secret: "CHANGE_ME_LONG_RANDOM_SECRET"
+# регистрация
+allow_registration = true
+registration_token = "CHANGE_ME_LONG_RANDOM_SECRET"
 ```
 
 Перезапуск:
 
 ```bash
-sudo systemctl restart matrix-synapse
-sudo systemctl status matrix-synapse
+sudo systemctl restart tuwunel
+sudo systemctl status tuwunel
 ```
 
 Проверка локально:
 
 ```bash
-curl -s http://127.0.0.1:8008/_matrix/client/versions
+curl -s http://127.0.0.1:6167/_matrix/client/versions
 ```
 
-### 3) Привязать USB-A к вашему Synapse
+### 3) Привязать USB-A к вашему Tuwunel
 
 В `.env` проекта USB-A:
 
 ```env
 PORT=3000
-MATRIX_BASE_URL=http://127.0.0.1:8008
-MATRIX_SHARED_SECRET=CHANGE_ME_LONG_RANDOM_SECRET
+MATRIX_BASE_URL=http://127.0.0.1:6167
+# MATRIX_SHARED_SECRET можно оставить пустым при Tuwunel
 ```
 
 После изменения `.env` перезапустите сервис USB-A.
@@ -108,10 +104,12 @@ MATRIX_SHARED_SECRET=CHANGE_ME_LONG_RANDOM_SECRET
 ## Запуск через Docker / Docker Compose (x86_64 + ARM64)
 
 Добавлен готовый `docker-compose.yml`, который поднимает:
-- `synapse` (ваш Matrix homeserver)
+- `tuwunel` (ваш Matrix homeserver)
 - `usb-a-matrix` (этот backend+frontend)
 
-Официальные образы `matrixdotorg/synapse` и `node:20-alpine` поддерживают разные архитектуры (включая **ARM64**, например Apple Silicon и Raspberry Pi 4/5).
+Официальные образы `ghcr.io/matrix-construct/tuwunel` и `node:20-alpine` поддерживают разные архитектуры (включая **ARM64**, например Apple Silicon и Raspberry Pi 4/5).
+
+Для ARM (Raspberry Pi/Apple Silicon) это рекомендованный способ запуска.
 
 ### 1) Подготовка
 
@@ -120,16 +118,17 @@ cp .env.example .env
 ```
 
 При необходимости поменяйте в `.env`:
-- `SYNAPSE_SERVER_NAME` (например `matrix.example.com`)
-- `MATRIX_SHARED_SECRET` (если хотите закрытую регистрацию через shared secret)
+- `TUWUNEL_SERVER_NAME` (например `matrix.example.com`)
+- `TUWUNEL_PORT` (`6167` по умолчанию)
+- `TUWUNEL_ALLOW_REGISTRATION` / `TUWUNEL_REGISTRATION_TOKEN` (если хотите закрытую регистрацию через токен)
 
-### 2) Сгенерировать конфиг Synapse
+### 2) Подготовить переменные Tuwunel
 
 ```bash
-./scripts/init-synapse.sh matrix.local no
+./scripts/init-tuwunel.sh matrix.local true
 ```
 
-Скрипт создаст `./synapse-data/homeserver.yaml` через контейнер Synapse.
+Скрипт создаст `.env.tuwunel` с готовыми переменными и директорию `./tuwunel-data`.
 
 ### 3) Запуск стека
 
@@ -144,18 +143,14 @@ curl http://127.0.0.1:8008/_matrix/client/versions
 curl http://127.0.0.1:3000/api/health
 ```
 
-### 4) Создать первого администратора Synapse
+### 4) Создать первого администратора Tuwunel
 
-```bash
-docker compose exec synapse register_new_matrix_user -u admin -p 'StrongPassword123' -a http://localhost:8008
-```
-
-После этого можно входить в USB-A под этим пользователем.
+Первый зарегистрированный пользователь становится администратором Tuwunel.
 
 ### 5) Полезные команды
 
 ```bash
-docker compose logs -f synapse
+docker compose logs -f tuwunel
 docker compose logs -f usb-a-matrix
 docker compose down
 ```
@@ -229,7 +224,7 @@ sudo chown -R usbamatrix:usbamatrix /opt/usb-a-matrix
 
 ```ini
 [Unit]
-Description=USB-A Matrix Messenger API
+Description=USB-A Tuwunel Messenger API
 After=network.target
 
 [Service]
@@ -321,26 +316,27 @@ sudo systemctl reload nginx
 
 Что делать:
 1. Входите существующим пользователем через кнопку **Вход**.
-2. Если вы админ Synapse и хотите включить self-registration, проверьте `homeserver.yaml`:
+2. Если вы админ Tuwunel и хотите включить self-registration, проверьте `tuwunel.toml`:
 
-```yaml
-enable_registration: true
+```toml
+allow_registration = true
 ```
 
-3. Если публичную регистрацию включать нельзя, используйте fallback-регистрацию через Admin API:
-   - задайте `MATRIX_SHARED_SECRET` в `.env` (тот же secret, что в Synapse конфиге);
+3. Если публичную регистрацию включать нельзя, используйте регистрацию по токену:
+   - задайте `TUWUNEL_REGISTRATION_TOKEN` в `.env`;
+   - включите `TUWUNEL_ALLOW_REGISTRATION=true`;
    - перезапустите backend (`sudo systemctl restart usb-a-matrix` или `npm run start`).
 
-4. После изменения конфигурации Synapse перезапустите его (пример):
+4. После изменения конфигурации Tuwunel перезапустите его (пример):
 
 ```bash
-sudo systemctl restart matrix-synapse
+sudo systemctl restart tuwunel
 ```
 
-5. Проверьте, что регистрация открылась (для варианта с `enable_registration: true`):
+5. Проверьте, что регистрация открылась (для варианта с `allow_registration = true`):
 
 ```bash
-curl -s "http://127.0.0.1:8008/_matrix/client/v3/register/available?username=test_user"
+curl -s "http://127.0.0.1:6167/_matrix/client/v3/register/available?username=test_user"
 ```
 
-Если не хотите открывать публичную регистрацию, оставьте её выключенной и регистрируйте пользователей через `MATRIX_SHARED_SECRET` или админ-утилиты Synapse.
+Если не хотите открывать публичную регистрацию, оставьте её выключенной и используйте `TUWUNEL_REGISTRATION_TOKEN`.

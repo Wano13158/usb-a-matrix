@@ -1,17 +1,17 @@
 services:
-  synapse:
-    image: matrixdotorg/synapse:latest
-    container_name: synapse
+  tuwunel:
+    image: ghcr.io/matrix-construct/tuwunel:latest
+    container_name: tuwunel
     restart: unless-stopped
     environment:
-      SYNAPSE_SERVER_NAME: ${SYNAPSE_SERVER_NAME:-matrix.local}
-      SYNAPSE_REPORT_STATS: ${SYNAPSE_REPORT_STATS:-no}
-      UID: 991
-      GID: 991
+      TUWUNEL_SERVER_NAME: ${TUWUNEL_SERVER_NAME:-matrix.local}
+      TUWUNEL_ALLOW_REGISTRATION: ${TUWUNEL_ALLOW_REGISTRATION:-true}
+      TUWUNEL_REGISTRATION_TOKEN: ${TUWUNEL_REGISTRATION_TOKEN:-}
+      TUWUNEL_PORT: ${TUWUNEL_PORT:-6167}
     volumes:
-      - ./synapse-data:/data
+      - ./tuwunel-data:/var/lib/tuwunel
     ports:
-      - "8008:8008"
+      - "8008:6167"
 
   usb-a-matrix:
     build:
@@ -21,9 +21,9 @@ services:
     restart: unless-stopped
     environment:
       PORT: 3000
-      MATRIX_BASE_URL: http://synapse:8008
+      MATRIX_BASE_URL: http://tuwunel:6167
       MATRIX_SHARED_SECRET: ${MATRIX_SHARED_SECRET:-}
     depends_on:
-      - synapse
+      - tuwunel
     ports:
       - "3000:3000"
