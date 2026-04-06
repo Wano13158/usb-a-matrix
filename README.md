@@ -46,10 +46,10 @@ MATRIX_BASE_URL=http://127.0.0.1:8008
 
 ```bash
 sudo apt update
-curl -fsSL https://github.com/matrix-construct/tuwunel/releases/latest/download/tuwunel-x86_64-unknown-linux-gnu -o tuwunel
-chmod +x tuwunel
-sudo mv tuwunel /usr/local/bin/tuwunel
+./scripts/install-tuwunel.sh
 ```
+
+Скрипт автоматически выбирает бинарник для `x86_64` и `arm64` (`aarch64`).
 
 Во время установки укажите домен вашего сервера (например `matrix.example.com`).
 
@@ -108,6 +108,8 @@ MATRIX_BASE_URL=http://127.0.0.1:8008
 - `usb-a-matrix` (этот backend+frontend)
 
 Официальные образы `ghcr.io/matrix-construct/tuwunel` и `node:20-alpine` поддерживают разные архитектуры (включая **ARM64**, например Apple Silicon и Raspberry Pi 4/5).
+
+Для ARM (Raspberry Pi/Apple Silicon) это рекомендованный способ запуска.
 
 ### 1) Подготовка
 
