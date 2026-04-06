@@ -62,7 +62,7 @@ sudo mkdir -p /opt/usb-a-matrix
 sudo chown "$USER":"$USER" /opt/usb-a-matrix
 git clone https://github.com/Wano13158/usb-a-matrix /opt/usb-a-matrix
 cd /opt/usb-a-matrix
-npm ci
+npm install
 ```
 
 ### 3) Настройка переменных окружения
