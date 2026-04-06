@@ -1,7 +1,7 @@
 {
   "name": "usb-a-matrix",
   "version": "0.1.0",
-  "description": "USB-A messenger on Matrix with web client and backend",
+  "description": "USB-A messenger on Tuwunel with web client and backend",
   "main": "server.js",
   "type": "module",
   "scripts": {
