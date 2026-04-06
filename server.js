@@ -14,7 +14,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "100kb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 function makeMatrixUrl(endpoint) {
@@ -26,6 +26,16 @@ function matrixAuthHeaders(token) {
     "Content-Type": "application/json",
     Authorization: `Bearer ${token}`,
   };
+}
+
+function getBearerToken(req) {
+  return req.headers.authorization?.replace("Bearer ", "").trim();
+}
+
+function sanitizeLimit(rawLimit, defaultLimit = 30) {
+  const parsed = Number(rawLimit ?? defaultLimit);
+  if (!Number.isFinite(parsed)) return defaultLimit;
+  return Math.max(1, Math.min(100, Math.trunc(parsed)));
 }
 
 app.get("/api/health", (_req, res) => {
@@ -92,7 +102,7 @@ app.post("/api/login", async (req, res) => {
 });
 
 app.get("/api/rooms", async (req, res) => {
-  const token = req.headers.authorization?.replace("Bearer ", "");
+  const token = getBearerToken(req);
 
   if (!token) {
     return res.status(401).json({ error: "Нужен access token" });
@@ -115,7 +125,7 @@ app.get("/api/rooms", async (req, res) => {
 });
 
 app.post("/api/rooms/join", async (req, res) => {
-  const token = req.headers.authorization?.replace("Bearer ", "");
+  const token = getBearerToken(req);
   const { roomIdOrAlias } = req.body;
 
   if (!token) {
@@ -146,7 +156,7 @@ app.post("/api/rooms/join", async (req, res) => {
 });
 
 app.get("/api/rooms/:roomId/messages", async (req, res) => {
-  const token = req.headers.authorization?.replace("Bearer ", "");
+  const token = getBearerToken(req);
   const { roomId } = req.params;
 
   if (!token) {
@@ -155,7 +165,7 @@ app.get("/api/rooms/:roomId/messages", async (req, res) => {
 
   try {
     const encodedRoom = encodeURIComponent(roomId);
-    const limit = Number(req.query.limit || 30);
+    const limit = sanitizeLimit(req.query.limit, 30);
     const response = await fetch(
       makeMatrixUrl(`/_matrix/client/v3/rooms/${encodedRoom}/messages?dir=b&limit=${limit}`),
       { headers: matrixAuthHeaders(token) }
@@ -173,7 +183,7 @@ app.get("/api/rooms/:roomId/messages", async (req, res) => {
 });
 
 app.post("/api/rooms/:roomId/send", async (req, res) => {
-  const token = req.headers.authorization?.replace("Bearer ", "");
+  const token = getBearerToken(req);
   const { roomId } = req.params;
   const { message } = req.body;
 
