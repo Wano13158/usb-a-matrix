@@ -63,6 +63,21 @@ app.post("/api/register", async (req, res) => {
 
     const data = await response.json();
     if (!response.ok) {
+      const matrixError = `${data?.error || ""}`;
+      const registrationDisabled =
+        response.status === 403 &&
+        data?.errcode === "M_FORBIDDEN" &&
+        matrixError.includes("Registration has been disabled");
+
+      if (registrationDisabled) {
+        return res.status(403).json({
+          errcode: data.errcode,
+          error:
+            "Регистрация отключена на Matrix homeserver. Войдите существующим пользователем или включите регистрацию на сервере (Synapse: enable_registration: true).",
+          details: data.error,
+        });
+      }
+
       return res.status(response.status).json(data);
     }
 
