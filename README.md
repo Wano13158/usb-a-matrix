@@ -60,9 +60,9 @@ npm -v
 ```bash
 sudo mkdir -p /opt/usb-a-matrix
 sudo chown "$USER":"$USER" /opt/usb-a-matrix
-git clone <URL_ВАШЕГО_РЕПО> /opt/usb-a-matrix
+git clone https://github.com/Wano13158/usb-a-matrix /opt/usb-a-matrix
 cd /opt/usb-a-matrix
-npm ci
+npm install
 ```
 
 ### 3) Настройка переменных окружения
@@ -186,31 +186,3 @@ sudo systemctl reload nginx
 - защита от CSRF/XSS
 - логирование и мониторинг
 - хранение секретов через vault/secret manager
-
-## Troubleshooting
-
-### Ошибка регистрации: `Registration has been disabled. Only m.login.application_service registrations are allowed.`
-
-Это означает, что на вашем Matrix homeserver отключена обычная регистрация пользователей.
-
-Что делать:
-1. Входите существующим пользователем через кнопку **Вход**.
-2. Если вы админ Synapse и хотите включить self-registration, проверьте `homeserver.yaml`:
-
-```yaml
-enable_registration: true
-```
-
-3. После изменения конфигурации перезапустите Synapse (пример):
-
-```bash
-sudo systemctl restart matrix-synapse
-```
-
-4. Проверьте, что регистрация открылась:
-
-```bash
-curl -s "http://127.0.0.1:8008/_matrix/client/v3/register/available?username=test_user"
-```
-
-Если не хотите открывать публичную регистрацию, оставьте её выключенной и используйте только вход уже созданных аккаунтов.
